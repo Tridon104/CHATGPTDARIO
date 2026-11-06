@@ -1,0 +1,44 @@
+{
+  "name": "@dario/ai-desktop",
+  "productName": "Dario AI Desktop",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "main": "dist/main.mjs",
+  "scripts": {
+    "build": "node build.mjs",
+    "test": "node --test test/*.test.mjs",
+    "pack:portable": "electron-builder --win portable --x64"
+  },
+  "dependencies": {
+    "@siwc/local": "0.1.0"
+  },
+  "devDependencies": {
+    "electron": "^42.0.0",
+    "electron-builder": "^26.0.12",
+    "esbuild": "^0.28.2"
+  },
+  "build": {
+    "appId": "it.dario.ai.desktop",
+    "productName": "Dario AI Desktop",
+    "directories": {
+      "output": "release"
+    },
+    "files": [
+      "dist/**/*",
+      "preload.cjs",
+      "ui/**/*",
+      "package.json",
+      "OPENAI_DEVKIT_LICENSE.txt",
+      "OPENAI_THIRD_PARTY_NOTICES.md"
+    ],
+    "win": {
+      "target": [
+        "portable"
+      ]
+    },
+    "portable": {
+      "artifactName": "Dario-AI-Desktop-PORTATILE-${version}.${ext}"
+    }
+  }
+}
