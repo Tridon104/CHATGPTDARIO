@@ -1,0 +1,16 @@
+<!doctype html>
+<html lang="it"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self' data:; object-src 'none'; connect-src 'none'">
+<title>Dario AI Desktop</title><link rel="stylesheet" href="styles.css"><script src="app.js" defer></script></head>
+<body><div class="shell">
+<aside><header><span class="logo">D·</span><div><strong>Dario AI</strong><small>PERSONAL DESKTOP</small></div></header>
+<button id="new" class="primary">＋ Nuova conversazione</button><input id="filter" placeholder="Cerca nelle conversazioni" autocomplete="off">
+<div class="subtitle">CONVERSAZIONI</div><nav id="chats"></nav><div class="aside-bottom">
+<button id="memory">◇ Memoria personale</button><button id="export">⇩ Esporta backup</button><button id="import">⇧ Importa backup</button>
+<button id="account">⚙ Gestisci ChatGPT</button><p id="status">Non collegato</p></div></aside>
+<main><div class="toolbar"><div><b id="heading">Dario AI Desktop</b><span class="tag">Archivio locale</span></div><select id="model"><option>Nessun modello</option></select></div>
+<section id="conversation"><div class="welcome" id="welcome"><span class="hero">D·</span><h1>La tua AI.<br><em>Il tuo desktop.</em></h1><p>Conversazioni persistenti, memoria locale e accesso con il tuo account ChatGPT.</p><button class="primary" id="connect">Collega ChatGPT</button></div><div id="messages"></div></section>
+<footer><div class="composer"><textarea id="prompt" rows="2" maxlength="16000" placeholder="Scrivi un messaggio a Dario AI..."></textarea><div class="composer-actions"><small>Invio per inviare • Maiusc + Invio per andare a capo</small><button class="primary" id="send">Invia ↑</button><button id="stop" hidden>Interrompi ■</button></div></div><small class="warning">La cronologia è salvata sul PC senza cifratura. Non inserire dati sanitari o aziendali riservati.</small></footer>
+</main></div>
+<div class="overlay" id="overlay" hidden><div class="modal"><div class="modalhead"><h2 id="modalTitle"></h2><button id="close">×</button></div><div id="modalBody"></div></div></div>
+<div class="toast" id="toast" hidden></div></body></html>
