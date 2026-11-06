@@ -1,0 +1,49 @@
+name: Compila Dario AI Desktop Windows
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  windows:
+    runs-on: windows-latest
+    timeout-minutes: 40
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/checkout@v4
+        with:
+          repository: openai/sign-in-with-chatgpt-devkit
+          path: devkit
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Prepare project as a DevKit workspace
+        shell: pwsh
+        run: |
+          New-Item -ItemType Directory -Path devkit/examples/dario-ai-desktop -Force | Out-Null
+          Copy-Item -Path dario-ai-desktop/* -Destination devkit/examples/dario-ai-desktop -Recurse -Force
+          Copy-Item devkit/LICENSE devkit/examples/dario-ai-desktop/OPENAI_DEVKIT_LICENSE.txt
+          Copy-Item devkit/THIRD_PARTY_NOTICES.md devkit/examples/dario-ai-desktop/OPENAI_THIRD_PARTY_NOTICES.md
+      - name: Install dependencies
+        working-directory: devkit
+        run: npm install --no-audit --no-fund
+      - name: Build OpenAI local SDK
+        working-directory: devkit
+        run: npm run build -w @siwc/local
+      - name: Test local database
+        working-directory: devkit
+        run: npm run test -w @dario/ai-desktop
+      - name: Bundle application
+        working-directory: devkit
+        run: npm run build -w @dario/ai-desktop
+      - name: Build portable Windows EXE
+        working-directory: devkit
+        run: npm run pack:portable -w @dario/ai-desktop
+      - uses: actions/upload-artifact@v4
+        with:
+          name: Dario-AI-Desktop-Windows
+          path: devkit/examples/dario-ai-desktop/release/*.exe
+          if-no-files-found: error
+          retention-days: 7
