@@ -1,3 +1,3 @@
 const {contextBridge,ipcRenderer}=require('electron');
-const allowed=new Set(['initial','signin','disconnect','models','model','new-chat','delete-chat','send','memory','remove-memory','backup','restore','stop']);
+const allowed=new Set(['initial','signin','disconnect','models','model','new-chat','delete-chat','send','memory','remove-memory','backup','restore','stop','copy-text','open-link']);
 contextBridge.exposeInMainWorld('dario',{invoke:(name,...args)=>{if(!allowed.has(name))throw Error('Unsupported command');return ipcRenderer.invoke('dario:'+name,...args)},onChange:cb=>ipcRenderer.on('dario:update',(_e,data)=>cb(data)),onDelta:cb=>ipcRenderer.on('dario:delta',(_e,data)=>cb(data))});
