@@ -185,3 +185,12 @@ button:focus-visible,input:focus-visible,textarea:focus-visible,select:focus-vis
  .shell.sidebar-closed .sidebar{display:none}
  .topbar #expand:not([hidden]){display:grid}
 }
+
+/* v1.2.1: keep the main pane responsive while requests run */
+.loading-chat{padding:32px 16px;text-align:center;color:var(--muted);font-size:13px}
+.nav-chat{contain:layout style;min-width:0}
+.conversation{min-height:0;flex:1 1 0;overflow-y:auto}
+.message-list{min-width:0}
+.message .response{overflow-wrap:anywhere}
+.composer textarea{overflow-y:auto;min-width:0}
+@media(min-width:721px){.main{min-width:0;flex-basis:0}}

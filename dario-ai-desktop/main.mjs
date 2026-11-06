@@ -4,7 +4,8 @@ import {fileURLToPath} from 'node:url';
 import {readFile,writeFile,mkdir,rename} from 'node:fs/promises';
 import {randomUUID} from 'node:crypto';
 import {createChatGPT} from '@siwc/local';
-import {validateFiles,normalizeText,cleanFileName,makePromptMessages,MAX_TEXT_CHARS} from './attachments.mjs';
+import {validateFiles,normalizeText,cleanFileName,makePromptMessages} from './attachments.mjs';
+import {lightweightSnapshot} from './perf-store.mjs';
 
 const root=join(dirname(fileURLToPath(import.meta.url)),'..');
 app.setName('Dario AI Desktop');
@@ -12,6 +13,12 @@ app.setPath('userData',join(app.getPath('appData'),'Dario AI Desktop'));
 const location=join(app.getPath('userData'),'dario-store.json');
 const attachmentsDir=join(app.getPath('userData'),'attachments');
 let win,sdk,active=null,models=[],data={chats:[],memories:[],model:''};
+let cachedSession={status:'loading',sharing:false};
+let modelsLoading=true;
+let refreshPromise=null;
+let persistQueue=Promise.resolve();
+let storeRevision=0;
+
 const date=()=>new Date().toISOString();
 const clone=()=>structuredClone(data);
 const attachmentPath=id=>join(attachmentsDir,id+'.txt');
@@ -23,25 +30,53 @@ function findAttachment(id) {
  throw new Error('Allegato non trovato.');
 }
 async function save(){
- await mkdir(dirname(location),{recursive:true});
+ const json=JSON.stringify(data);
  const tmp=location+'.'+randomUUID()+'.tmp';
- await writeFile(tmp,JSON.stringify(data,null,2),'utf8');
- await rename(tmp,location);
+ const write=async()=>{
+  await mkdir(dirname(location),{recursive:true});
+  await writeFile(tmp,json,'utf8');
+  await rename(tmp,location);
+ };
+ persistQueue=persistQueue.catch(()=>{}).then(write);
+ return persistQueue;
 }
 async function change(fn){
- const previous=clone();
- try{const result=fn();await save();await publish();return result}
- catch(error){data=previous;throw error}
+ const result=fn();
+ storeRevision++;
+ await save();
+ publish();
+ return result;
 }
-async function auth(){try{return await sdk.getSession()}catch(e){return {status:'disconnected',sharing:false,error:String(e)}}}
-async function snapshot(){return {data:clone(),session:await auth(),models,busy:!!active,activeChatId:active?.id??null}}
-async function publish(){if(win&&!win.isDestroyed())win.webContents.send('dario:update',await snapshot())}
+function snapshot(){
+ return lightweightSnapshot(data,cachedSession,models,modelsLoading,active,storeRevision);
+}
+function publish(){
+ if(win&&!win.isDestroyed()&&!win.webContents.isDestroyed())
+  win.webContents.send('dario:update',snapshot());
+}
 const register=(name,fn)=>ipcMain.handle('dario:'+name,async (_event,...args)=>fn(...args));
 async function refresh(){
- const s=await sdk.getSession();
- models=(s.status==='connected'&&s.sharing)?await sdk.listModels():[];
- if(models.length&&!models.some(m=>m.slug===data.model))data.model=models[0].slug;
- await save();await publish();
+ if(refreshPromise)return refreshPromise;
+ modelsLoading=true;publish();
+ refreshPromise=(async()=>{
+  const s=await sdk.getSession();
+  cachedSession=s;
+  publish();
+  if(s.status==='connected'&&s.sharing){
+   const discovered=await sdk.listModels();
+   models=Array.isArray(discovered)?discovered:[];
+  }else models=[];
+  if(models.length&&!models.some(m=>m.slug===data.model)){
+   data.model=models[0].slug;
+   await save();
+  }
+ })().catch(error=>{
+  console.warn('[Dario AI] Refresh modelli:',String(error));
+  // Non bloccare mai la chat per un errore temporaneo di rete.
+ }).finally(()=>{
+  modelsLoading=false;refreshPromise=null;publish();
+ });
+ return refreshPromise;
 }
 async function materialize(input){
  const entries=validateFiles(input);
@@ -55,15 +90,13 @@ async function materialize(input){
  return files;
 }
 async function modelInput(chat){
- const recent=chat.messages.slice(-7);
- const refs=[];
- for(const msg of recent)for(const attachment of msg.attachments||[]){
-  if(!isId(attachment.id))continue;
-  refs.push(attachment);
- }
- const selected=refs.slice(-5);
+ // Gli allegati delle chat passate non vengono reinviati in ogni richiesta:
+ // evitano tempi di risposta enormi e consumi inutili di contesto.
+ const latest=chat.messages.at(-1);
+ const refs=latest?.role==='user'?(latest.attachments||[]).slice(0,5):[];
  const contents=[];
- for(const file of selected){
+ for(const file of refs){
+  if(!isId(file.id))continue;
   try{
    const text=await readFile(attachmentPath(file.id),'utf8');
    contents.push({name:file.name,content:text});
@@ -73,25 +106,46 @@ async function modelInput(chat){
  }
  return makePromptMessages(chat,data.memories,contents);
 }
-async function runModel(chat){
- if(active)throw new Error('Una risposta è già in corso');
- const abort=new AbortController();
- active={id:chat.id,abort};
- await publish();
+async function runModel(chat,existingAbort=null){
+ if(active&&(!existingAbort||active.abort!==existingAbort))
+  throw new Error('Una risposta è già in corso');
+ const abort=existingAbort||new AbortController();
+ active={id:chat.id,abort};publish();
+ let streamTimer=null,buffer='';
+ const flush=()=>{
+  if(streamTimer){clearTimeout(streamTimer);streamTimer=null}
+  if(!buffer)return;
+  const delta=buffer;buffer='';
+  if(win&&!win.isDestroyed()&&!win.webContents.isDestroyed())
+   win.webContents.send('dario:delta',{id:chat.id,delta});
+ };
  try{
+  if(abort.signal.aborted)throw new Error('Richiesta interrotta');
   const context=await modelInput(chat);
+  if(abort.signal.aborted)throw new Error('Richiesta interrotta');
   const response=await sdk.streamResponse({
    model:data.model,...context,signal:abort.signal,
    onDelta:delta=>{
-    if(win&&!win.isDestroyed())win.webContents.send('dario:delta',{id:chat.id,delta:String(delta??'')});
+    buffer+=String(delta??'');
+    if(!streamTimer)streamTimer=setTimeout(flush,45);
    }
   });
+  flush();
   if(!response.text?.trim())throw new Error('Nessuna risposta generata');
-  await change(()=>{chat.messages.push({id:randomUUID(),role:'assistant',text:response.text,at:date()})});
- }finally{active=null;await publish()}
+  await change(()=>{
+   chat.messages.push({id:randomUUID(),role:'assistant',text:response.text,at:date()});
+  });
+ }finally{
+  flush();
+  if(active?.abort===abort){active=null;publish()}
+ }
 }
-async function assertConnected(){
- const s=await sdk.getSession();
+async function assertConnected(signal){
+ const authPromise=sdk.getSession();
+ const s=signal?await Promise.race([authPromise,new Promise((_,reject)=>{
+  if(signal.aborted)return reject(new Error('Richiesta interrotta'));
+  signal.addEventListener('abort',()=>reject(new Error('Richiesta interrotta')),{once:true});
+ })]):await authPromise;
  if(s.status!=='connected'||!s.sharing)throw new Error('Collega e autorizza ChatGPT');
  if(!models.some(m=>m.slug===data.model))throw new Error('Modello non disponibile');
 }
@@ -133,6 +187,22 @@ async function restore(){
 }
 function setup(){
  register('initial',snapshot);
+ register('get-chat',id=>{
+  const chat=getChat(id);
+  if(!chat)throw new Error('Chat non trovata');
+  return structuredClone(chat);
+ });
+ register('search-chats',term=>{
+  const query=String(term??'').trim().toLowerCase().slice(0,150);
+  if(query.length<3)return [];
+  const found=[];
+  for(const chat of data.chats){
+   if(chat.title.toLowerCase().includes(query)||
+      chat.messages.some(m=>String(m.text||'').toLowerCase().includes(query)))found.push(chat.id);
+   if(found.length>=100)break;
+  }
+  return found;
+ });
  register('signin',async()=>{await sdk.signIn();await refresh()});
  register('disconnect',async()=>{await sdk.disconnect();await refresh()});
  register('models',refresh);
@@ -212,15 +282,27 @@ function setup(){
  register('send',async(id,body,files=[])=>{
   if(active)throw new Error('Risposta già in corso');
   const chat=getChat(id);if(!chat)throw new Error('Chat non trovata');
-  await assertConnected();
   const entries=validateFiles(files);
   const text=normalizeText(body,entries.length>0);
-  const attachments=await materialize(entries);
-  await change(()=>{
-   chat.messages.push({id:randomUUID(),role:'user',text,attachments,at:date()});
-   if(chat.title==='Nuova chat')chat.title=(text||attachments[0]?.name||'Nuova chat').slice(0,70);
-  });
-  return runModel(chat);
+  const abort=new AbortController();
+  active={id,abort,phase:'preparing'};
+  publish();
+  try{
+   const attachments=await materialize(entries);
+   if(abort.signal.aborted)throw new Error('Richiesta interrotta');
+   await change(()=>{
+    chat.messages.push({id:randomUUID(),role:'user',text,attachments,at:date()});
+    if(chat.title==='Nuova chat')chat.title=(text||attachments[0]?.name||'Nuova chat').slice(0,70);
+   });
+   if(abort.signal.aborted)throw new Error('Richiesta interrotta');
+   await assertConnected(abort.signal);
+   return await runModel(chat,abort);
+  }catch(error){
+   if(error?.message!=='Richiesta interrotta')console.warn('[Dario AI] Invio:',String(error));
+   throw error;
+  }finally{
+   if(active?.abort===abort){active=null;publish()}
+  }
  });
  register('regenerate',async id=>{
   if(active)throw new Error('Interrompi prima la risposta');
@@ -253,7 +335,8 @@ async function launch(){
    await shell.openExternal(url.href);
   }
  });
- sdk.subscribe(()=>{void publish()});setup();
+ sdk.subscribe(session=>{cachedSession=session;publish()});setup();
+ if(data.model)models=[{slug:data.model,displayName:data.model}];
  win=new BrowserWindow({
   title:'Dario AI Desktop',width:1260,height:840,minWidth:600,minHeight:500,
   backgroundColor:'#212121',autoHideMenuBar:true,
@@ -267,8 +350,9 @@ async function launch(){
  win.webContents.on('will-navigate',e=>e.preventDefault());
  win.webContents.session.setPermissionRequestHandler((_wc,_permission,callback)=>callback(false));
  await win.loadFile(join(root,'ui','index.html'));
- await refresh();
- await publish();
+ publish();
+ // La finestra viene resa immediatamente, senza attendere OAuth o la rete.
+ setImmediate(()=>{void refresh()});
 }
 if(!app.requestSingleInstanceLock())app.quit();
 else{

@@ -3,8 +3,8 @@ export const AUTO_FILE_CHARS = 4500;
 export const AUTO_FILE_LINES = 70;
 export const MAX_FILE_CHARS = 2_000_000;
 export const MAX_FILES = 5;
-export const MAX_CONTEXT_FILE_CHARS = 100_000;
-export const MAX_CONTEXT_TOTAL_CHARS = 130_000;
+export const MAX_CONTEXT_FILE_CHARS = 40_000;
+export const MAX_CONTEXT_TOTAL_CHARS = 60_000;
 
 export function cleanFileName(value) {
   const raw = String(value ?? 'allegato.txt').replace(/[\\/:*?"<>|\u0000-\u001f]/g, '_').trim().slice(0, 120);
@@ -31,11 +31,11 @@ export function shouldAttachPaste(value) {
   return typeof value === 'string' && (value.length > AUTO_FILE_CHARS || value.split('\n').length > AUTO_FILE_LINES);
 }
 export function makePromptMessages(chat,memory,attachmentTexts=[]) {
-  const messages=(chat?.messages??[]).slice(-18);
+  const messages=(chat?.messages??[]).slice(-8);
   const lastIndex=messages.length-1;
   let left=MAX_CONTEXT_TOTAL_CHARS;
   const input=messages.map((msg,index) => {
-    const max=index===lastIndex ? MAX_TEXT_CHARS : 6000;
+    const max=index===lastIndex ? MAX_TEXT_CHARS : 1500;
     const content=String(msg.text??'').slice(0, max);
     left -= content.length;
     return {role:msg.role==='assistant'?'assistant':'user',content};
