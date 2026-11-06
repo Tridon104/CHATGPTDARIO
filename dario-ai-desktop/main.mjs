@@ -1,4 +1,4 @@
-import {app,BrowserWindow,ipcMain,dialog,shell,safeStorage} from 'electron';
+import {app,BrowserWindow,ipcMain,dialog,shell,safeStorage,clipboard} from 'electron';
 import {join,dirname} from 'node:path';
 import {fileURLToPath} from 'node:url';
 import {readFile,writeFile,mkdir,rename} from 'node:fs/promises';
@@ -39,6 +39,8 @@ function setup(){
  register('delete-chat',id=>change(()=>{if(active?.id===id)throw Error('Interrompi la risposta prima di eliminare');data.chats=data.chats.filter(c=>c.id!==id)}));
  register('memory',text=>change(()=>{data.memories.unshift({id:randomUUID(),text:validText(text,1000)})}));
  register('remove-memory',id=>change(()=>{data.memories=data.memories.filter(m=>m.id!==id)}));
+ register('copy-text',text=>{const value=String(text??'');if(value.length>500000)throw Error('Testo troppo lungo');clipboard.writeText(value);});
+ register('open-link',async raw=>{const value=String(raw??'');if(value.length>4096)throw Error('Link troppo lungo');const url=new URL(value);if(!['https:','http:'].includes(url.protocol))throw Error('Link non consentito');await shell.openExternal(url.href);});
  register('stop',()=>{active?.abort.abort()});
  register('backup',async()=>{const o=await dialog.showSaveDialog(win,{defaultPath:'dario-ai-backup.json',filters:[{name:'JSON',extensions:['json']}]});if(!o.canceled)await writeFile(o.filePath,JSON.stringify(data,null,2),'utf8');});
  register('restore',async()=>{const o=await dialog.showOpenDialog(win,{properties:['openFile'],filters:[{name:'JSON',extensions:['json']}]});if(o.canceled)return;const raw=await readFile(o.filePaths[0],'utf8');if(raw.length>30e6)throw Error('Backup troppo grande');const next=JSON.parse(raw);if(!Array.isArray(next.chats)||!Array.isArray(next.memories)||typeof next.model!=='string')throw Error('Backup non valido');const confirm=await dialog.showMessageBox(win,{type:'warning',buttons:['Annulla','Sostituisci'],defaultId:0,cancelId:0,message:'Sostituire le chat e le memorie locali?'});if(confirm.response===1)await change(()=>{data=next});});
