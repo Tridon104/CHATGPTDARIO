@@ -14,7 +14,7 @@
     "@siwc/local": "0.1.0"
   },
   "devDependencies": {
-    "electron": "^42.0.0",
+    "electron": "42.0.0",
     "electron-builder": "^26.0.12",
     "esbuild": "^0.28.2"
   },
