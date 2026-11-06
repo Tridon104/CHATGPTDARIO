@@ -1,77 +1,76 @@
 <!doctype html>
-<html lang="it" data-theme="dark">
+<html lang="it" data-theme="light">
 <head>
-  <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width,initial-scale=1">
-  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self' data:; object-src 'none'; connect-src 'none'; base-uri 'self'">
-  <title>Dario AI Desktop</title>
-  <link rel="stylesheet" href="styles.css">
-  <script src="../dist/renderer.js" defer></script>
+ <meta charset="utf-8">
+ <meta name="viewport" content="width=device-width,initial-scale=1">
+ <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self' data:; object-src 'none'; connect-src 'none'; base-uri 'self'">
+ <title>Dario AI Desktop</title>
+ <link rel="stylesheet" href="styles.css">
+ <script src="../dist/renderer.js" defer></script>
 </head>
 <body>
 <div class="shell" id="shell">
-  <aside class="sidebar" id="sidebar">
-    <div class="side-head">
-      <button type="button" class="brand" id="brand" title="Dario AI Desktop">
-        <span class="brand-mark">D</span><span>Dario AI</span>
-      </button>
-      <button type="button" class="icon-btn" id="collapse" title="Nascondi barra laterale" aria-label="Nascondi barra laterale">☰</button>
-    </div>
-    <button type="button" class="side-new" id="new"><span class="icon-big">✎</span><span>Nuova chat</span></button>
-    <label class="search-box"><span>⌕</span><input id="filter" placeholder="Cerca nelle chat" aria-label="Cerca nelle chat" autocomplete="off"></label>
-    <div class="section-label">Recenti</div>
-    <nav id="chats" aria-label="Cronologia delle conversazioni"></nav>
-    <div class="side-bottom">
-      <button type="button" class="side-link" id="memory"><span class="menu-icon">◇</span><span>Memoria</span></button>
-      <button type="button" class="side-link" id="export"><span class="menu-icon">⇩</span><span>Esporta chat e memorie</span></button>
-      <button type="button" class="side-link" id="import"><span class="menu-icon">⇧</span><span>Importa backup</span></button>
-      <button type="button" class="side-link" id="theme"><span class="menu-icon" id="themeIcon">☼</span><span id="themeLabel">Tema chiaro</span></button>
-      <button type="button" class="account-card" id="account"><span class="account-avatar">D</span><span class="account-lines"><strong>Il tuo account ChatGPT</strong><small id="status">Non collegato</small></span><span class="account-more">···</span></button>
-    </div>
-  </aside>
-  <main class="main">
-    <header class="topbar">
-      <div class="top-left">
-        <button type="button" class="icon-btn" id="expand" aria-label="Mostra barra laterale" title="Mostra barra laterale" hidden>☰</button>
-        <div class="top-brand">Dario AI <span class="subdued">⌄</span></div>
-      </div>
-      <div class="top-right">
-        <span class="local-tag">Memoria locale</span>
-        <label class="model-picker"><span class="visually-hidden">Modello AI</span><select id="model"><option>Nessun modello</option></select></label>
-      </div>
-    </header>
-    <section id="conversation" class="conversation" aria-label="Conversazione">
-      <div class="welcome" id="welcome">
-        <div class="welcome-mark">D</div>
-        <h1>Da dove iniziamo?</h1>
-        <p>Il tuo assistente personale, con le tue conversazioni e la memoria salvate sul computer.</p>
-        <div class="suggestions">
-          <button type="button" data-prompt="Aiutami a organizzare le idee per un nuovo progetto.">✦ &nbsp;Organizziamo un progetto</button>
-          <button type="button" data-prompt="Mi aiuti a riscrivere un testo in modo più chiaro e professionale?">✎ &nbsp;Miglioriamo un testo</button>
-        </div>
-      </div>
-      <div id="messages" class="message-list" aria-live="polite"></div>
-    </section>
-    <footer class="composer-wrap">
-      <div class="composer">
-        <textarea id="prompt" rows="1" maxlength="16000" placeholder="Chiedi qualcosa a Dario AI" aria-label="Scrivi un messaggio"></textarea>
-        <div class="composer-row">
-          <span class="composer-hint">Maiusc + Invio per andare a capo</span>
-          <div class="composer-buttons">
-            <button type="button" class="stop-btn" id="stop" title="Interrompi risposta" hidden>■</button>
-            <button type="button" class="send-btn" id="send" aria-label="Invia messaggio" title="Invia messaggio">↑</button>
-          </div>
-        </div>
-      </div>
-      <p class="footnote">Dario AI può commettere errori. Chat e memoria sono salvate localmente senza cifratura: non inserire dati aziendali o sanitari riservati.</p>
-    </footer>
-  </main>
-</div>
-<div class="overlay" id="overlay" hidden>
-  <div class="modal" role="dialog" aria-modal="true" aria-labelledby="modalTitle">
-    <div class="modal-head"><h2 id="modalTitle"></h2><button type="button" class="icon-btn close-modal" id="close" aria-label="Chiudi">×</button></div>
-    <div id="modalBody"></div>
+ <aside class="sidebar" id="sidebar">
+  <div class="side-head">
+   <button type="button" class="brand" id="brand" title="Nuova chat"><span class="brand-mark">D</span><strong>Dario AI</strong></button>
+   <button class="icon-btn" id="collapse" title="Chiudi barra laterale" aria-label="Chiudi barra laterale"><span data-icon="panel-left-close"></span></button>
   </div>
+  <button class="side-new" id="new"><span data-icon="square-pen"></span><span>Nuova chat</span></button>
+  <label class="search-box"><span data-icon="search"></span><input id="filter" placeholder="Cerca nelle chat" aria-label="Cerca nelle chat" autocomplete="off"></label>
+  <div class="section-label">Recenti</div>
+  <nav id="chats" aria-label="Conversazioni recenti"></nav>
+  <div class="side-bottom">
+   <button type="button" class="side-link" id="memory"><span data-icon="brain"></span><span>Memoria</span></button>
+   <button type="button" class="side-link" id="export"><span data-icon="download"></span><span>Esporta backup</span></button>
+   <button type="button" class="side-link" id="import"><span data-icon="upload"></span><span>Importa backup</span></button>
+   <button type="button" class="side-link" id="theme"><span id="themeIcon" data-icon="moon"></span><span id="themeLabel">Tema scuro</span></button>
+   <button type="button" class="account-card" id="account"><span class="account-avatar">D</span><span class="account-lines"><strong>Account ChatGPT</strong><small id="status">Non collegato</small></span><span data-icon="ellipsis"></span></button>
+  </div>
+ </aside>
+ <main class="main">
+  <header class="topbar">
+   <div class="top-left">
+    <button type="button" class="icon-btn" id="expand" title="Mostra barra laterale" aria-label="Mostra barra laterale" hidden><span data-icon="panel-left-open"></span></button>
+    <span class="top-brand">Dario AI <span class="brand-chevron" data-icon="chevron-down"></span></span>
+   </div>
+   <div class="top-right">
+    <span class="local-tag">Memoria locale</span>
+    <label class="model-picker"><span class="visually-hidden">Modello</span><select id="model"><option>Nessun modello</option></select></label>
+   </div>
+  </header>
+  <section class="conversation" id="conversation" aria-label="Conversazione">
+   <div class="welcome" id="welcome"><span class="welcome-mark">D</span><h1>Come posso aiutarti?</h1><p>Scrivi una domanda, incolla un codice o allega un file di testo.</p>
+    <div class="suggestions">
+     <button data-prompt="Mi aiuti a scrivere codice per un progetto?"><span data-icon="code"></span> Scrivi codice</button>
+     <button data-prompt="Mi aiuti a organizzare un progetto in passi concreti?"><span data-icon="folder"></span> Organizza un progetto</button>
+    </div>
+   </div>
+   <div id="messages" class="message-list"></div>
+  </section>
+  <footer class="composer-wrap">
+   <div class="composer" id="composer">
+    <div id="attachmentChips" class="pending-files" hidden></div>
+    <textarea id="prompt" rows="1" placeholder="Chiedi qualsiasi cosa" aria-label="Scrivi un messaggio"></textarea>
+    <div class="composer-row">
+     <div class="composer-tools">
+      <button type="button" class="icon-btn attach-btn" id="attach" aria-label="Allega file di testo" title="Allega file di testo"><span data-icon="plus"></span></button>
+      <span class="composer-hint" id="hint">Incolla codice lungo: diventa un file .txt</span>
+     </div>
+     <div class="composer-buttons">
+      <button type="button" class="stop-btn round-btn" id="stop" aria-label="Interrompi risposta" title="Interrompi" hidden><span data-icon="square" data-size="15"></span></button>
+      <button type="button" class="send-btn round-btn" id="send" aria-label="Invia" title="Invia messaggio"><span data-icon="arrow-up" data-size="20"></span></button>
+     </div>
+    </div>
+   </div>
+   <input type="file" id="files" multiple accept=".txt,.md,.log,.js,.jsx,.ts,.tsx,.py,.json,.html,.css,.csv,.xml,.sql,.yml,.yaml,.sh,.ps1,.bat,.java,.c,.cpp,.h,.cs,.go,.rs,.rb,.php" hidden>
+   <div class="footnote">Dario AI può commettere errori. Non inserire dati aziendali o sanitari riservati.</div>
+  </footer>
+ </main>
 </div>
+<div class="overlay" id="overlay" hidden><section class="modal" role="dialog" aria-modal="true" aria-labelledby="modalTitle">
+ <header class="modal-head"><h2 id="modalTitle"></h2><button type="button" id="close" class="icon-btn" aria-label="Chiudi"><span data-icon="x"></span></button></header>
+ <div id="modalBody" class="modal-body"></div>
+</section></div>
+<div class="context-menu" id="contextMenu" hidden></div>
 <div class="toast" id="toast" role="status" hidden></div>
 </body></html>
